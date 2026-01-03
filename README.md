@@ -1,35 +1,3 @@
-# Logbook Backend
-
-A REST API built with NestJS for managing users, projects, and logbook entries.
-Supports multi-tenant access and JWT-based authentication.
-
-## Features
-- JWT authentication (access & refresh tokens)
-- Role-based authorization
-- Multi-tenant data isolation (company-based)
-- Project, logbook, to do list management
-- CSRF protection
-
-## Tech Stack
-- NestJS
-- TypeScript
-- PostgreSQL
-- TypeORM
-- JWT + Passport
-- Redis (optional, for future caching)
-
-## Requirements
-- Node.js 18+
-- PostgreSQL 14+
-- npm
-
-## Setup
-
-```bash
-git clone https://github.com/JrKevNa/logbook-backend.git
-cd logbook-backend
-npm install
-
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
