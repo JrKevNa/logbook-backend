@@ -25,10 +25,10 @@ Supports multi-tenant access and JWT-based authentication.
 
 ## Setup
 
-bash
-git clone https://github.com/JrKevNa/logbook-backend.git
-cd logbook-backend
-npm install
+- bash
+- git clone https://github.com/JrKevNa/logbook-backend.git
+- cd logbook-backend
+- npm install
 
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
