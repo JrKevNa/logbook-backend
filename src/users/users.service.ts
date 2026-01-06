@@ -23,20 +23,26 @@ export class UsersService {
 		private readonly caslAbilityFactory: CaslAbilityFactory, 
 	) {}
 
+	createUserFromRegister(createUserDto: CreateUserDto) {
+		const item = this.userRepo.createUserFromRegister(createUserDto); // converts DTO to entity
+		return this.userRepo.saveUserFromRegister(item); // saves to Postgres
+	}
+
 	create(createUserDto: CreateUserDto) {
 		const item = this.userRepo.create(createUserDto); // converts DTO to entity
 		return this.userRepo.save(item); // saves to Postgres
 	}
 
 	async createInternalUser(companyId: string, createUserDto: CreateUserDto) {
-		// 1️⃣ Hash password
-		const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+		// // 1️⃣ Hash password
+		// const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
 		// 2️⃣ Create the user entity
 		const user = this.userRepo.create({
+			nik: createUserDto.nik,
 			username: createUserDto.username,
 			email: createUserDto.email,
-			password: hashedPassword,
+			// password: hashedPassword,
 		});
 
 		// 3️⃣ Save user first
@@ -117,6 +123,7 @@ export class UsersService {
 	}
 
 	async findByEmail(email: string): Promise<User | null> {
+		if (!email) return null
 		return this.userRepo.findOne({ 
 			where: { email },
 			relations: ['company', 'userRoles', 'userRoles.role'],
@@ -175,9 +182,10 @@ export class UsersService {
 		ForbiddenError.from(ability).throwUnlessCan('update', targetUser);
 
 		// 3️⃣ Apply updates
-		const { roleId, password, ...rest } = updateDto;
+		// const { roleId, password, ...rest } = updateDto;
+		const { roleId, ...rest } = updateDto;
 		const userUpdates: any = { ...rest };
-		if (password) userUpdates.password = await bcrypt.hash(password, 10);
+		// if (password) userUpdates.password = await bcrypt.hash(password, 10);
 
 		await this.userRepo.manager.transaction(async (manager) => {
 			if (Object.keys(userUpdates).length > 0) {
@@ -204,12 +212,12 @@ export class UsersService {
 		return this.findOne(id, currentUser.companyId);
 	}
 
-	async updatePassword(id: string, hashedPassword: string) {
-		return this.userRepo.updateWithTenant(
-			{ id },
-			{ password: hashedPassword },
-		);
-	}
+	// async updatePassword(id: string, hashedPassword: string) {
+	// 	return this.userRepo.updateWithTenant(
+	// 		{ id },
+	// 		{ password: hashedPassword },
+	// 	);
+	// }
 
 
 	remove(id: string) {

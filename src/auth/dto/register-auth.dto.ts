@@ -3,5 +3,5 @@ export class RegisterAuthDto {
     username: string;
     nik: string;
     email: string;
-    password: string;
+    // password: string;
 }

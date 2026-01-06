@@ -24,6 +24,8 @@ import { CaslModule } from 'src/casl/casl.module';
 import { CsrfModule } from 'src/csrf/csrf.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
+import googleOauthConfig from './config/google-oauth.config';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
 	imports: [
@@ -44,6 +46,7 @@ import { StringValue } from 'ms';
 			}),
 		}),
 		ConfigModule,
+		ConfigModule.forFeature(googleOauthConfig),
 		CaslModule, 
 		CsrfModule,
 		UsersModule,
@@ -52,7 +55,7 @@ import { StringValue } from 'ms';
 		CompaniesModule
 	],
 	controllers: [AuthController],
-	providers: [JwtStrategy, AuthService],
+	providers: [JwtStrategy, AuthService, GoogleStrategy],
 	exports: [JwtStrategy, AuthService],
 })
 export class AuthModule {}

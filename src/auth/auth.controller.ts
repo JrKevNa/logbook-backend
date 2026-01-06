@@ -18,6 +18,7 @@ import { PoliciesGuard } from '../casl/guards/policies.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { REFRESH_TOKEN_COOKIE, ACCESS_TOKEN_COOKIE, CSRF_COOKIE, TOKEN_EXPIRY } from './config/cookies.config';
 import { ConfigService } from '@nestjs/config';
+import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
 
 const logger = winston.createLogger({
 	transports: [
@@ -47,32 +48,66 @@ export class AuthController {
 		private readonly config: ConfigService,
 	) {}
 
+	@Get('google/login')
+	@UseGuards(GoogleAuthGuard)
+	googleLogin() {
+
+	}
+
+	@UseGuards(GoogleAuthGuard)
+	@Get('google/callback')
+	async googleCallback(@Req() req: any, @Res() res: Response) {
+		const email = req.user?.email;
+		console.log('current user email: ', email)
+
+		// 1. Check if user exists
+		const user = await this.usersService.findByEmail(email);
+
+		if (!user) {
+			// Not registered → redirect popup to frontend register page
+			return res.redirect(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/register`);
+		}
+
+		// 2. User exists → generate tokens
+		const { accessToken, refreshToken } = await this.authService.generateTokens(user);
+
+		// 3. Set cookies for frontend to read
+		res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
+		res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
+		const csrfToken = randomUUID();
+		res.cookie('csrfToken', csrfToken, { httpOnly: false });
+
+		// 4. Redirect popup to a "success page" that frontend knows
+		res.redirect(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/oauth-success`);
+		return { user, accessToken, refreshToken };
+	}
+
 	@Post('register')
 	async register(@Body() dto: RegisterAuthDto) {
 		return this.authService.register(dto);
 	}
 
-	@Post('login')
-	async login(
-		@Body() dto: LoginAuthDto,
-		@Res({ passthrough: true }) res: Response
-	) {
-		const { user, accessToken, refreshToken } = await this.authService.login(dto);
+	// @Post('login')
+	// async login(
+	// 	@Body() dto: LoginAuthDto,
+	// 	@Res({ passthrough: true }) res: Response
+	// ) {
+	// 	const { user, accessToken, refreshToken } = await this.authService.login(dto);
 
-		// Set HTTP-only cookies for web
-		// res.cookie('accessToken', accessToken, { httpOnly: true, secure: false, sameSite: 'lax', maxAge: 30 * 1000 });
-		// res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: false, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
+	// 	// Set HTTP-only cookies for web
+	// 	// res.cookie('accessToken', accessToken, { httpOnly: true, secure: false, sameSite: 'lax', maxAge: 30 * 1000 });
+	// 	// res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: false, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-		res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
-		res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
+	// 	res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
+	// 	res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
 
-		const csrfToken = randomUUID();
-		res.cookie('csrfToken', csrfToken, { 
-			httpOnly: false 
-		});
+	// 	const csrfToken = randomUUID();
+	// 	res.cookie('csrfToken', csrfToken, { 
+	// 		httpOnly: false 
+	// 	});
 
-		return { user, accessToken, refreshToken }; // optional return for mobile
-	}
+	// 	return { user, accessToken, refreshToken }; // optional return for mobile
+	// }
 
 	@Post('mobile-refresh')
 	async mobileRefresh(@Body() body: { refreshToken: string }) {
@@ -168,12 +203,12 @@ export class AuthController {
 		return { message: 'Logged out successfully' };
 	}
 
-	@UseGuards(AuthGuard('jwt'), PoliciesGuard, CsrfGuard)
-	@CheckPolicies((ability: AppAbility) => ability.can('update', User))
-	@Post('change-password')
-	async changePassword(@CurrentUser() user: User, @Body() body: ChangePasswordDto, @Res({ passthrough: true }) res: Response) {
-		return this.authService.changePassword(user.id, body);
-	}
+	// @UseGuards(AuthGuard('jwt'), PoliciesGuard, CsrfGuard)
+	// @CheckPolicies((ability: AppAbility) => ability.can('update', User))
+	// @Post('change-password')
+	// async changePassword(@CurrentUser() user: User, @Body() body: ChangePasswordDto, @Res({ passthrough: true }) res: Response) {
+	// 	return this.authService.changePassword(user.id, body);
+	// }
 
 
 	// @Post()

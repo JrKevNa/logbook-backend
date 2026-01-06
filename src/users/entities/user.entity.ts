@@ -18,9 +18,9 @@ export class User {
     @Column({ unique: true })
     email: string;
 
-    @Exclude()
-    @Column()
-    password: string;
+    // @Exclude()
+    // @Column()
+    // password: string;
 
     // @OneToMany(() => UserRole, (userRole) => userRole.user, { cascade: true })
     // roles: Role[];

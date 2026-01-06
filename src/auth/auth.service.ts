@@ -11,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { TOKEN_EXPIRY } from './config/cookies.config';
 import { ConfigService } from '@nestjs/config';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -33,15 +34,15 @@ export class AuthService {
 		// 1️⃣ Create the company
 		const company = await this.companiesService.create({ name: dto.companyName });
 
-		// 2️⃣ Hash the password
-		const hashedPassword = await bcrypt.hash(dto.password, 10);
+		// // 2️⃣ Hash the password
+		// const hashedPassword = await bcrypt.hash(dto.password, 10);
 
 		// 3️⃣ Create the user
-		const user = await this.usersService.create({
+		const user = await this.usersService.createUserFromRegister({
 			username: dto.username,
 			email: dto.email,
 			nik: dto.nik,
-			password: hashedPassword,
+			// password: hashedPassword,
 			companyId: company.id, // link user to company
 		});
 		// console.log("user id: ", user.id);
@@ -60,48 +61,97 @@ export class AuthService {
 		return user;
 	}
 
-	async login(dto: LoginAuthDto) {
-		const user = await this.usersService.findByEmail(dto.email);
-		if (!user) throw new UnauthorizedException();
+	// async login(dto: LoginAuthDto) {
+	// 	const user = await this.usersService.findByEmail(dto.email);
+	// 	if (!user) throw new UnauthorizedException();
 
-		const valid = await bcrypt.compare(dto.password, user.password);
-		if (!valid) throw new UnauthorizedException();
+	// 	const valid = await bcrypt.compare(dto.password, user.password);
+	// 	if (!valid) throw new UnauthorizedException();
 
-		// Map roles
+	// 	// Map roles
+	// 	const roles = user.userRoles?.map(ur => ur.role.name) ?? [];
+
+	// 	// Include roles in JWT payload
+	// 	const payload = {
+	// 		id: user.id,
+	// 		username: user.username,
+	// 		email: user.email,
+	// 		companyId: user.companyId,
+	// 		roles, // ✅ added
+	// 	};
+
+	// 	const accessToken = this.jwtService.sign(payload, { 
+	// 		secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
+	// 		expiresIn: TOKEN_EXPIRY.access,
+	// 	});
+
+	// 	const refreshToken = this.jwtService.sign(payload, { 
+	// 		secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
+	// 		expiresIn: TOKEN_EXPIRY.refresh,
+	// 	});
+
+	// 	return { 
+	// 		user: {
+	// 			id: user.id,
+	// 			username: user.username,
+	// 			email: user.email,
+	// 			company: await this.companiesService.findOne(user.companyId),
+	// 			roles, // optional: return roles in response too
+	// 		},
+	// 		accessToken, 
+	// 		refreshToken 
+	// 	};
+	// }
+
+	async loginWithGoogle(googleUser: LoginAuthDto) {
+		const user = await this.usersService.findByEmail(googleUser.email);
+
+		console.log('login with google: ', user?.email)
+
+		if (!user) {
+			// Option A: throw error → must register first
+			throw new UnauthorizedException('You need to register first.');
+			
+			// Option B: auto-register (if you want first-time login = admin)
+			// const newUser = await this.usersService.createFromGoogle(googleUser);
+			// return this.generateTokens(newUser);
+		}
+
+		return this.generateTokens(user);
+	}
+
+	public async generateTokens(user: User) {
 		const roles = user.userRoles?.map(ur => ur.role.name) ?? [];
-
-		// Include roles in JWT payload
 		const payload = {
 			id: user.id,
 			username: user.username,
 			email: user.email,
 			companyId: user.companyId,
-			roles, // ✅ added
+			roles,
 		};
 
-		const accessToken = this.jwtService.sign(payload, { 
+		const accessToken = this.jwtService.sign(payload, {
 			secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
 			expiresIn: TOKEN_EXPIRY.access,
 		});
 
-		const refreshToken = this.jwtService.sign(payload, { 
+		const refreshToken = this.jwtService.sign(payload, {
 			secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
 			expiresIn: TOKEN_EXPIRY.refresh,
 		});
 
-		return { 
+		return {
 			user: {
 				id: user.id,
 				username: user.username,
 				email: user.email,
 				company: await this.companiesService.findOne(user.companyId),
-				roles, // optional: return roles in response too
+				roles,
 			},
-			accessToken, 
-			refreshToken 
+			accessToken,
+			refreshToken,
 		};
 	}
-
 	// async refresh(refreshToken: string): Promise<{ accessToken: string }> {
 	// 	const payload = await this.jwtService.verifyAsync(refreshToken, { secret: jwtConstants.refreshSecret });
 	// 	const user = await this.usersService.findUserById(payload.id);
@@ -116,20 +166,32 @@ export class AuthService {
 	// 	return { accessToken: newAccessToken };
 	// }
 
-	async changePassword(id: string, body: ChangePasswordDto) {
-		const user = await this.usersService.findUserById(id);
-		if (!user) throw new BadRequestException('User not found');
+	// async changePassword(id: string, body: ChangePasswordDto) {
+	// 	const user = await this.usersService.findUserById(id);
+	// 	if (!user) throw new BadRequestException('User not found');
 
-		const isMatch = await bcrypt.compare(body.oldPassword, user.password);
-		if (!isMatch) throw new BadRequestException('Old password is incorrect');
+	// 	const isMatch = await bcrypt.compare(body.oldPassword, user.password);
+	// 	if (!isMatch) throw new BadRequestException('Old password is incorrect');
 
-		const hashedNew = await bcrypt.hash(body.newPassword, 10);
-		await this.usersService.updatePassword(id, hashedNew);
-	}
+	// 	const hashedNew = await bcrypt.hash(body.newPassword, 10);
+	// 	await this.usersService.updatePassword(id, hashedNew);
+	// }
 
 	// create(createAuthDto: CreateAuthDto) {
 	// 	return 'This action adds a new auth';
 	// }
+
+	async validateGoogleUser(googleUser: LoginAuthDto) {
+		const user = await this.usersService.findByEmail(googleUser.email);
+
+		if (!user) {
+			throw new UnauthorizedException(
+				'You are not registered yet. Please register first.'
+			);
+		}
+
+		return user;
+	}
 
 	findAll() {
 		return `This action returns all auth`;
