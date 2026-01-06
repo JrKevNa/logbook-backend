@@ -12,10 +12,12 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { TOKEN_EXPIRY } from './config/cookies.config';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/users/entities/user.entity';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
-
+	private _googleClient?: OAuth2Client;
+	
 	constructor(
 		private readonly usersService: UsersService,
 		private readonly companiesService: CompaniesService,
@@ -103,6 +105,37 @@ export class AuthService {
 	// 	};
 	// }
 
+    private get googleClient() {
+        if (!this._googleClient) {
+            this._googleClient = new OAuth2Client(
+                this.config.getOrThrow('GOOGLE_MOBILE_CLIENT_ID'),
+            );
+        }
+        return this._googleClient;
+    }
+
+    async loginWithGoogleIdToken(idToken: string) {
+        // 1. Verify token with Google
+        const ticket = await this.googleClient.verifyIdToken({
+            idToken,
+            audience: this.config.get('GOOGLE_MOBILE_CLIENT_ID'),
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload || !payload.email) {
+            throw new UnauthorizedException('Invalid Google token');
+        }
+
+        // 2. Find user
+        const user = await this.usersService.findByEmail(payload.email);
+        if (!user) {
+            throw new UnauthorizedException('User not registered');
+        }
+
+        // 3. Issue your JWTs
+        return this.generateTokens(user);
+    }
+	
 	async loginWithGoogle(googleUser: LoginAuthDto) {
 		const user = await this.usersService.findByEmail(googleUser.email);
 

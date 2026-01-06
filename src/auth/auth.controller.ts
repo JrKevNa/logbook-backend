@@ -87,6 +87,11 @@ export class AuthController {
 		return this.authService.register(dto);
 	}
 
+	@Post('google/mobile/login')
+	async googleMobileLogin(@Body() body: { idToken: string }) {
+		return this.authService.loginWithGoogleIdToken(body.idToken);
+	}
+
 	// @Post('login')
 	// async login(
 	// 	@Body() dto: LoginAuthDto,
